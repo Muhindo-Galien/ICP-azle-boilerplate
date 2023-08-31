@@ -1,5 +1,6 @@
 // Canister code for Movie Tickets
 import { $query, $update, Record, StableBTreeMap, Vec, match, Result, nat64, ic, Opt } from 'azle';
+import { v4 as uuidv4 } from 'uuid';
 
 type MovieTicket = Record<{
     id: string;
@@ -26,8 +27,19 @@ export function getTicket(id: string): Result<MovieTicket, string> {
 
 $update;
 export function addTicket(movie: string, seat: nat64): Result<MovieTicket, string> {
+    // Generate a cryptographically secure UUID
+    const newTicketId: string = uuidv4();
+
+    // Validate inputs
+    if (movie.trim() === '') {
+        return Result.Err<MovieTicket, string>('Movie name cannot be empty.');
+    }
+    if (seat <= 0) {
+        return Result.Err<MovieTicket, string>('Invalid seat number.');
+    }
+
     const newTicket: MovieTicket = { 
-        id: `${Math.random().toString(36).substr(2, 9)}`, 
+        id: newTicketId, 
         movie: movie,
         seat: seat, 
         reserved: false, 
@@ -42,16 +54,15 @@ export function reserveTicket(id: string): Result<MovieTicket, string> {
     return match(ticketStorage.get(id), {
         Some: (ticket: MovieTicket) => {
             if (ticket.reserved) {
-                return Result.Err<MovieTicket, string>("This ticket is already reserved.") as Result<MovieTicket, string>;
+                return Result.Err<MovieTicket, string>('This ticket is already reserved.');
             }
             const reservedTicket: MovieTicket = { ...ticket, reserved: true };
             ticketStorage.insert(ticket.id, reservedTicket);
-            return Result.Ok(reservedTicket) as Result<MovieTicket, string>;
+            return Result.Ok(reservedTicket);
         },
-        None: () => Result.Err<MovieTicket, string>(`Ticket with id=${id} does not exist.`) as Result<MovieTicket, string>
+        None: () => Result.Err<MovieTicket, string>(`Ticket with id=${id} does not exist.`)
     });
 }
-
 
 $update;
 export function deleteTicket(id: string): Result<MovieTicket, string> {
