@@ -16,7 +16,7 @@
     "node": "^12 || ^14 || ^16 || ^18"
   },
   "keywords": [],
-  "author": "",
+  "author": "Ivanov",
   "license": "ISC",
   "devDependencies": {
     "@types/uuid": "^9.0.1"
