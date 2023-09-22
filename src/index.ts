@@ -1,3 +1,4 @@
+// Import necessary modules and types from external libraries
 import {
   $query,
   $update,
@@ -13,6 +14,7 @@ import {
 } from "azle";
 import { v4 as uuidv4 } from "uuid";
 
+// Define the User and Flight data structures using Records
 type User = Record<{
   id: string;
   name: string;
@@ -34,6 +36,7 @@ type Flight = Record<{
   updatedAt: Opt<nat64>;
 }>;
 
+// Define payload types for creating Users and Flights
 type FlightPayload = Record<{
   companyName: string;
   departureLocation: string;
@@ -47,9 +50,13 @@ type UserPayload = Record<{
   age: nat64;
 }>;
 
+// Create storage instances for flights and users using StableBTreeMap
 const flightStorage = new StableBTreeMap<string, Flight>(0, 44, 1024);
 const userStorage = new StableBTreeMap<string, User>(1, 44, 1024);
 
+// $update directive indicates an update operation (not part of standard JavaScript)
+
+// Function to create a new Flight
 $update;
 export function createFlight(payload: FlightPayload): Result<Flight, string> {
   // Validate the payload before processing it
@@ -57,6 +64,7 @@ export function createFlight(payload: FlightPayload): Result<Flight, string> {
     return Result.Err("Missing required fields in payload");
   }
 
+    // Generate a new Flight object and store it in the flightStorage map
   const flight: Flight = {
     id: uuidv4(),
     createdAt: ic.time(),
@@ -75,6 +83,9 @@ export function createFlight(payload: FlightPayload): Result<Flight, string> {
   }
 }
 
+// $query directive indicates a query operation (not part of standard JavaScript)
+
+// Function to get a Flight by its ID
 $query;
 export function getFlight(id: string): Result<Flight, string> {
   try {
@@ -87,6 +98,17 @@ export function getFlight(id: string): Result<Flight, string> {
   }
 }
 
+// Function to get all Flights
+$query;
+export function getAllFlights(): Result<Vec<Flight>, string> {
+    try {
+        return Result.Ok(flightStorage.values());
+    } catch (error) {
+        return Result.Err("An error occurred while retrieving flights.");
+    }
+}
+
+// Function to update an existing Flight
 $update;
 export function updateFlight(
   id: string,
@@ -97,6 +119,7 @@ export function updateFlight(
     return Result.Err("Missing required fields in payload");
   }
 
+  // Find the existing Flight, update it, and store the updated Flight
   return match(flightStorage.get(id), {
     Some: (existingFlight) => {
       const updatedFlight: Flight = {
@@ -118,6 +141,7 @@ export function updateFlight(
   });
 }
 
+// Function to delete a Flight by its ID
 $update;
 export function deleteFlight(id: string): Result<Flight, string> {
   try {
@@ -133,6 +157,7 @@ export function deleteFlight(id: string): Result<Flight, string> {
   }
 }
 
+// Function to book a Flight for a User
 $update;
 export function bookFlight(id: string, userId: string): Result<Flight, string> {
   return match(flightStorage.get(id), {
@@ -154,6 +179,7 @@ export function bookFlight(id: string, userId: string): Result<Flight, string> {
   });
 }
 
+// Function to create a new User
 $update;
 export function createUser(payload: UserPayload): Result<User, string> {
   
@@ -162,6 +188,7 @@ export function createUser(payload: UserPayload): Result<User, string> {
     return Result.Err<User, string>("Invalid payload");
   }
 
+    // Generate a new User object and store it in the userStorage map
   const user: User = {
     id: uuidv4(),
     createdAt: ic.time(),
@@ -174,6 +201,7 @@ export function createUser(payload: UserPayload): Result<User, string> {
   return Result.Ok<User, string>(user);
 }
 
+// Function to get a User by their ID
 $query;
 export function getUser(id: string): Result<User, string> {
   return match(userStorage.get(id), {
@@ -182,6 +210,17 @@ export function getUser(id: string): Result<User, string> {
   });
 }
 
+// Function to get all Users
+$query;
+export function getAllUsers(): Result<Vec<User>, string> {
+    try {
+        return Result.Ok(userStorage.values());
+    } catch (error) {
+        return Result.Err("An error occurred while retrieving users.");
+    }
+}
+
+// Function to delete a User by their ID
 $update;
 export function deleteUser(id: string): Result<User, string> {
   // Validate the id parameter
@@ -203,13 +242,22 @@ export function deleteUser(id: string): Result<User, string> {
 }
 }
 
+// Function to update an existing User
 $update;
 export function updateUser(id: string, payload: UserPayload): Result<User, string> {
+  // Validate the payload
+  if (!payload.name || !payload.email || !payload.age) {
+    return Result.Err<User, string>("Invalid payload");
+  }
+
   return match(userStorage.get(id), {
     Some: (existingUser) => {
       const updatedUser: User = {
-        ...existingUser,
-        ...payload,
+        id: existingUser.id,
+        name: payload.name,
+        email: payload.email,
+        age: payload.age,
+        createdAt: existingUser.createdAt,
         updatedAt: Opt.Some(ic.time()),
       };
 
@@ -220,7 +268,7 @@ export function updateUser(id: string, payload: UserPayload): Result<User, strin
   });
 }
 
-
+// Add a crypto object to globalThis with a getRandomValues function
 globalThis.crypto = {
   //@ts-ignore
   getRandomValues: () => {
