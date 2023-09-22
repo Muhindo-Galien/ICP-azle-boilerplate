@@ -1,0 +1,39 @@
+type Flight = record {
+  id : text;
+  departureLocation : text;
+  arrivalLocation : text;
+  departureDate : text;
+  owner : principal;
+  createdAt : nat64;
+  updatedAt : opt nat64;
+  companyName : text;
+  users : vec User;
+};
+type FlightPayload = record {
+  departureLocation : text;
+  arrivalLocation : text;
+  departureDate : text;
+  companyName : text;
+};
+type User = record {
+  id : text;
+  age : nat64;
+  name : text;
+  createdAt : nat64;
+  email : text;
+  updatedAt : opt nat64;
+};
+type UserPayload = record { age : nat64; name : text; email : text };
+type _AzleResult = variant { Ok : Flight; Err : text };
+type _AzleResult_1 = variant { Ok : User; Err : text };
+service : () -> {
+  bookFlight : (text, text) -> (_AzleResult);
+  createFlight : (FlightPayload) -> (_AzleResult);
+  createUser : (UserPayload) -> (_AzleResult_1);
+  deleteFlight : (text) -> (_AzleResult);
+  deleteUser : (text) -> (_AzleResult_1);
+  getFlight : (text) -> (_AzleResult) query;
+  getUser : (text) -> (_AzleResult_1) query;
+  updateFlight : (text, FlightPayload) -> (_AzleResult);
+  updateUser : (text, UserPayload) -> (_AzleResult_1);
+}

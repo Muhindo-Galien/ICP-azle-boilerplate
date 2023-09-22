@@ -52,6 +52,11 @@ const userStorage = new StableBTreeMap<string, User>(1, 44, 1024);
 
 $update;
 export function createFlight(payload: FlightPayload): Result<Flight, string> {
+  // Validate the payload before processing it
+  if (!payload.companyName || !payload.departureLocation || !payload.arrivalLocation || !payload.departureDate) {
+    return Result.Err("Missing required fields in payload");
+  }
+
   const flight: Flight = {
     id: uuidv4(),
     createdAt: ic.time(),
@@ -61,16 +66,25 @@ export function createFlight(payload: FlightPayload): Result<Flight, string> {
     users: [],
   };
 
-  flightStorage.insert(flight.id, flight);
-  return Result.Ok(flight);
+  
+  try {
+    flightStorage.insert(flight.id, flight);
+    return Result.Ok(flight);
+  } catch (error) {
+    return Result.Err("Failed to create flight");
+  }
 }
 
 $query;
 export function getFlight(id: string): Result<Flight, string> {
-  return match(flightStorage.get(id), {
-    Some: (flight) => Result.Ok<Flight, string>(flight),
-    None: () => Result.Err<Flight, string>(`Flight with id=${id} not found.`),
-  });
+  try {
+    return match(flightStorage.get(id), {
+      Some: (flight) => Result.Ok<Flight, string>(flight),
+      None: () => Result.Err<Flight, string>(`Flight with id=${id} not found.`),
+    });
+  } catch (error) {
+    return Result.Err<Flight, string>(`Error retrieving flight with id=${id}: ${error}`);
+  }
 }
 
 $update;
@@ -78,11 +92,22 @@ export function updateFlight(
   id: string,
   payload: FlightPayload
 ): Result<Flight, string> {
+  // Validate the payload before processing it
+  if (!payload.companyName || !payload.departureLocation || !payload.arrivalLocation || !payload.departureDate) {
+    return Result.Err("Missing required fields in payload");
+  }
+
   return match(flightStorage.get(id), {
     Some: (existingFlight) => {
       const updatedFlight: Flight = {
-        ...existingFlight,
-        ...payload,
+        id: existingFlight.id,
+        owner: existingFlight.owner,
+        companyName: payload.companyName,
+        departureLocation: payload.departureLocation,
+        arrivalLocation: payload.arrivalLocation,
+        departureDate: payload.departureDate,
+        users: existingFlight.users,
+        createdAt: existingFlight.createdAt,
         updatedAt: Opt.Some(ic.time()),
       };
 
@@ -95,13 +120,17 @@ export function updateFlight(
 
 $update;
 export function deleteFlight(id: string): Result<Flight, string> {
-  return match(flightStorage.get(id), {
-    Some: (existingFlight) => {
-      flightStorage.remove(id);
-      return Result.Ok<Flight, string>(existingFlight);
-    },
-    None: () => Result.Err<Flight, string>(`Flight with id=${id} not found.`),
-  });
+  try {
+    return match(flightStorage.get(id), {
+      Some: (existingFlight) => {
+        flightStorage.remove(id);
+        return Result.Ok<Flight, string>(existingFlight);
+      },
+      None: () => Result.Err<Flight, string>(`Flight with id=${id} not found.`),
+    });
+  } catch (error) {
+    return Result.Err<Flight, string>(`An error occurred while deleting the flight: ${error}`);
+  }
 }
 
 $update;
@@ -111,7 +140,10 @@ export function bookFlight(id: string, userId: string): Result<Flight, string> {
       // Assuming user exists and can be retrieved based on userId
       return match(userStorage.get(userId), {
         Some: (user) => {
-          flight.users.push(user);
+          if (!flight.users.includes(user)) {
+            flight.users.push(user);
+            flight.updatedAt = Opt.Some(ic.time());
+          }
           flightStorage.insert(id, flight);
           return Result.Ok<Flight, string>(flight);
         },
@@ -124,12 +156,19 @@ export function bookFlight(id: string, userId: string): Result<Flight, string> {
 
 $update;
 export function createUser(payload: UserPayload): Result<User, string> {
+  
+  // Validate the payload
+  if (!payload.name || !payload.email || !payload.age) {
+    return Result.Err<User, string>("Invalid payload");
+  }
+
   const user: User = {
     id: uuidv4(),
     createdAt: ic.time(),
     updatedAt: Opt.None,
     ...payload,
   };
+  
 
   userStorage.insert(user.id, user);
   return Result.Ok<User, string>(user);
@@ -145,6 +184,13 @@ export function getUser(id: string): Result<User, string> {
 
 $update;
 export function deleteUser(id: string): Result<User, string> {
+  // Validate the id parameter
+  if (!id) {
+    return Result.Err<User, string>(`Invalid UUID: ${id}`);
+  }
+  
+  // Delete the user if found
+  try{
   return match(userStorage.get(id), {
     Some: (user) => {
       userStorage.remove(id);
@@ -152,6 +198,9 @@ export function deleteUser(id: string): Result<User, string> {
     },
     None: () => Result.Err<User, string>(`User with id = ${id} not found.`),
   });
+} catch (error) {
+  return Result.Err<User, string>(`Error deleting user with id = ${id}: ${error}`);
+}
 }
 
 $update;
@@ -184,3 +233,4 @@ globalThis.crypto = {
     return array;
   },
 };
+
