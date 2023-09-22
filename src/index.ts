@@ -266,8 +266,9 @@ export function updateUser(id: string, payload: UserPayload): Result<User, strin
     },
     None: () => Result.Err<User, string>(`User with id = ${id} not found.`),
   });
-}
+}//   git config --global user.name "Mahesh"
 
+// git config --global user.email "ishwakam@gmail.com"
 // Add a crypto object to globalThis with a getRandomValues function
 globalThis.crypto = {
   //@ts-ignore
